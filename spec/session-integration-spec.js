@@ -74,8 +74,12 @@ liveSuite("ide-csharp real editor integration", () => {
     );
     await until(
       () =>
-        diagnostics.some(({ diagnostics: items }) => items.some(({ code }) => code === "CS0103")),
-      "real pulled compiler diagnostics",
+        diagnostics.some(
+          ({ diagnostics: items }) =>
+            items.some(({ code }) => code === "CS0103") &&
+            items.some(({ code }) => code === "IDE0059"),
+        ),
+      "compiler and analyzer diagnostics aggregated from independent pull providers",
     );
     const main = lumine.packages.getActivePackage("ide-client").mainModule;
     const Point = require("lumine").Point;
@@ -167,6 +171,16 @@ liveSuite("ide-csharp real editor integration", () => {
     await refreshed.find(({ title }) => title.includes("Generate method 'missingName'")).selected();
     expect(editor.getText()).toContain("void missingName()");
     expect(editor.getText()).toContain("😀");
+    await until(() => {
+      const items = diagnostics
+        .filter(({ session: owner }) => owner === session)
+        .at(-1)?.diagnostics;
+      return (
+        items &&
+        !items.some(({ code }) => code === "CS0103") &&
+        items.some(({ code }) => code === "IDE0059")
+      );
+    }, "compiler diagnostic cleared while unchanged analyzer diagnostics survive");
     const provider = main.provideCodeFormatFile();
     expect((await provider.formatEntireFile(editor)).length).toBeGreaterThan(0);
     for (const [feature, method] of [
