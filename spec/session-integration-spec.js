@@ -107,6 +107,13 @@ liveSuite("ide-csharp real editor integration", () => {
       .provideSymbol()
       .getSymbols({ editor, type: "project", query: "Double" });
     expect(projectSymbols.some(({ name }) => name === "Double")).toBe(true);
+    editor.setCursorBufferPosition(at("Triple(3)", 1));
+    const definitions = await main.provideSymbol().getSymbols({ editor, type: "project-find" });
+    expect(
+      definitions.some(
+        ({ path: target }) => target?.toLowerCase() === fixture.supportPath.toLowerCase(),
+      ),
+    ).toBe(true);
     editor.setCursorBufferPosition(at("Double(3)", 1));
     const references = await main
       .provideFindReferences()
@@ -162,6 +169,25 @@ liveSuite("ide-csharp real editor integration", () => {
     expect(editor.getText()).toContain("😀");
     const provider = main.provideCodeFormatFile();
     expect((await provider.formatEntireFile(editor)).length).toBeGreaterThan(0);
+    for (const [feature, method] of [
+      ["autocomplete", "textDocument/completion"],
+      ["signature", "textDocument/signatureHelp"],
+      ["definition", "textDocument/definition"],
+      ["references", "textDocument/references"],
+      ["symbols", "textDocument/documentSymbol"],
+      ["rename", "textDocument/rename"],
+      ["codeActions", "textDocument/codeAction"],
+      ["inlayHints", "textDocument/inlayHint"],
+      ["semanticTokens", "textDocument/semanticTokens/full"],
+      ["callHierarchy", "textDocument/prepareCallHierarchy"],
+      ["typeHierarchy", "textDocument/prepareTypeHierarchy"],
+      ["diagnostics", "textDocument/diagnostic"],
+    ]) {
+      lumine.config.set(`ide-csharp.features.${feature}`, false);
+      expect(await service.activeSessionForFeature(editor, method)).toBeNull();
+      lumine.config.unset(`ide-csharp.features.${feature}`);
+      expect(await service.activeSessionForFeature(editor, method)).toBe(session);
+    }
     lumine.config.set("ide-csharp.features.format", false);
     expect(await service.activeSessionForFeature(editor, "textDocument/formatting")).toBeNull();
     expect(await provider.formatEntireFile(editor)).toEqual([]);

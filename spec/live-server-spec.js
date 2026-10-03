@@ -90,6 +90,6 @@ liveSuite("ide-csharp real Roslyn protocol", () => {
     expect(covered).toContain("code action edits");
     expect(service).toBeTruthy();
     await lumine.packages.deactivatePackage("ide-client");
-    managed.dispose();
+    managed.emitter.dispose();
   });
 });
