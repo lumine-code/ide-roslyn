@@ -1,0 +1,209 @@
+{
+  "name": "ide-csharp",
+  "author": "lumine-code",
+  "description": "Provide C# language features with Roslyn.",
+  "repository": "https://github.com/lumine-code/ide-csharp",
+  "bugs": {
+    "url": "https://github.com/lumine-code/ide-csharp/issues"
+  },
+  "keywords": [
+    "c#",
+    ".net",
+    "roslyn",
+    "msbuild",
+    "language-server",
+    "lsp",
+    "refactoring"
+  ],
+  "version": "1.0.0",
+  "license": "MIT",
+  "engines": {
+    "lumine": "^1.0.0"
+  },
+  "main": "./lib/main",
+  "files": [
+    "lib",
+    "spec"
+  ],
+  "scripts": {
+    "test": "lumine --test spec",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "consumedServices": {
+    "ide-client": {
+      "versions": {
+        "^1.0.0": "consumeIdeClient"
+      }
+    }
+  },
+  "providedServices": {
+    "background-tips.provider": {
+      "versions": {
+        "1.0.0": "provideBackgroundTips"
+      }
+    }
+  },
+  "specPackages": [
+    "ide-client",
+    "language-csharp"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.4.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "vscode-jsonrpc": "^9.0.3"
+  },
+  "configSchema": {
+    "serverPath": {
+      "title": "Server Path",
+      "description": "Absolute path to roslyn-language-server or its DLL. Leave empty to use the managed installation, then PATH.",
+      "type": "string",
+      "default": ""
+    },
+    "dotnetPath": {
+      "title": ".NET Path",
+      "description": "Absolute path to dotnet. Leave empty to use PATH. Install a .NET 10 SDK to run Roslyn and load MSBuild projects; preserve the SDKs required by project global.json files.",
+      "type": "string",
+      "default": ""
+    },
+    "notifyWhenMissing": {
+      "title": "Notify When Missing",
+      "description": "Offer to install Roslyn when no language server can be found.",
+      "type": "boolean",
+      "default": true
+    },
+    "parameterHints": {
+      "title": "Parameter Hints",
+      "description": "Control Roslyn inline parameter names. Server Default preserves its choice.",
+      "type": "string",
+      "enum": [
+        "server-default",
+        "enabled",
+        "disabled"
+      ],
+      "default": "server-default"
+    },
+    "typeHints": {
+      "title": "Type Hints",
+      "description": "Control Roslyn inline inferred types. Server Default preserves its choice.",
+      "type": "string",
+      "enum": [
+        "server-default",
+        "enabled",
+        "disabled"
+      ],
+      "default": "server-default"
+    },
+    "features": {
+      "title": "Features",
+      "description": "Which Roslyn features the editor uses. References code lenses require a client command that the editor does not implement.",
+      "type": "object",
+      "scopeResolution": "grammar",
+      "properties": {
+        "diagnostics": {
+          "title": "Diagnostics",
+          "description": "Report compiler and analyzer diagnostics.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "autocomplete": {
+          "title": "Autocomplete",
+          "description": "Complete C# symbols and imports.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "hover": {
+          "title": "Hover",
+          "description": "Show symbol types and documentation.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "signature": {
+          "title": "Signature Help",
+          "description": "Show method parameters while entering arguments.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "definition": {
+          "title": "Go To Definition",
+          "description": "Navigate to source, metadata, types and implementations.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "references": {
+          "title": "Find References",
+          "description": "Find symbol uses across the project.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "callHierarchy": {
+          "title": "Call Hierarchy",
+          "description": "Navigate between methods and their callers.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "typeHierarchy": {
+          "title": "Type Hierarchy",
+          "description": "Navigate between base and derived types.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "symbols": {
+          "title": "Symbols",
+          "description": "Find document and workspace symbols.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "format": {
+          "title": "Format",
+          "description": "Format documents and selections with Roslyn.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "Rename symbols across the project.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "codeActions": {
+          "title": "Code Actions",
+          "description": "Apply compiler fixes and refactorings.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "inlayHints": {
+          "title": "Inlay Hints",
+          "description": "Show parameter names and inferred types inline.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        },
+        "semanticTokens": {
+          "title": "Semantic Tokens",
+          "description": "Classify C# symbols with semantic information.",
+          "type": "boolean",
+          "scopeResolution": "grammar",
+          "default": true
+        }
+      }
+    }
+  }
+}

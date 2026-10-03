@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks on ${{ matrix.os }} (Node 24)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm pack --dry-run
+
+  integration:
+    name: Real Roslyn and Lumine integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      LUMINE_JASMINE_REPORTER: list
+      LUMINE_TEST_PACKAGES: ide-client language-csharp
+      ROSLYN_VERSION: 5.12.0-1.26475.2
+      REQUIRE_ROSLYN: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: ide-csharp
+      - uses: actions/checkout@v7
+        with:
+          repository: lumine-code/lumine
+          path: lumine
+      - uses: actions/checkout@v7
+        with:
+          repository: lumine-code/ide-client
+          path: ide-client
+      - uses: actions/checkout@v7
+        with:
+          repository: lumine-code/language-csharp
+          path: language-csharp
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: lumine/.nvmrc
+          cache: npm
+          cache-dependency-path: lumine/package-lock.json
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.401
+      - name: Install the exact official MIT Roslyn tool
+        run: |
+          dotnet tool install roslyn-language-server --version "$ROSLYN_VERSION" --tool-path "$GITHUB_WORKSPACE/.test-tools"
+          echo "CSHARP_SERVER_PATH=$GITHUB_WORKSPACE/.test-tools/roslyn-language-server" >> "$GITHUB_ENV"
+          echo "CSHARP_DOTNET_PATH=$(command -v dotnet)" >> "$GITHUB_ENV"
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y xvfb libx11-dev libxkbfile-dev libsecret-1-dev
+      - name: Use HTTPS for public Git dependencies
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+      - name: Install adapter dependencies
+        working-directory: ide-csharp
+        run: npm ci --ignore-scripts
+      - name: Install client dependencies
+        working-directory: ide-client
+        run: npm ci --ignore-scripts
+      - name: Install editor dependencies
+        working-directory: lumine
+        run: |
+          install() { npm ci --ignore-scripts; }
+          install || install || install
+      - name: Prepare Electron
+        working-directory: lumine
+        run: |
+          node node_modules/electron/install.js
+          npm run build
+      - name: Link editor service packages
+        run: |
+          echo "LUMINE_HOME=$GITHUB_WORKSPACE/.test-home" >> "$GITHUB_ENV"
+          mkdir -p "$GITHUB_WORKSPACE/.test-home/packages"
+          ln -s "$GITHUB_WORKSPACE/ide-client" "$GITHUB_WORKSPACE/.test-home/packages/ide-client"
+          ln -s "$GITHUB_WORKSPACE/language-csharp" "$GITHUB_WORKSPACE/.test-home/packages/language-csharp"
+      - name: Run Jasmine specs against the real editor and server
+        working-directory: lumine
+        timeout-minutes: 20
+        run: xvfb-run --auto-servernum npm start -- --dev --test ../ide-csharp/spec
