@@ -174,6 +174,22 @@ describe("ide-csharp adapter and NuGet management", () => {
       server.resolveServer(process.execPath, null, process.execPath),
     ).toBeRejectedWithError(/installed .NET SDK/);
   });
+  it("derives the runtime root from the real dotnet host and rejects directories", async () => {
+    validRuntime();
+    const canonical = await fs.promises.realpath(process.execPath);
+    const link = path.join(scratch, process.platform === "win32" ? "dotnet.exe" : "dotnet");
+    // Test canonical host selection without requiring Windows symlink privileges.
+    spyOn(fs.promises, "realpath").and.callFake(async (file) => (file === link ? canonical : file));
+    spyOn(fs.promises, "access").and.resolveTo();
+    const modulePath = path.join(scratch, "roslyn.dll");
+    fs.writeFileSync(modulePath, "fixture");
+    const launch = await server.resolveServer(modulePath, null, link);
+    expect(launch.command).toBe(canonical);
+    expect(launch.env.DOTNET_ROOT).toBe(path.dirname(canonical));
+    await expectAsync(server.resolveServer(scratch, null, process.execPath)).toBeRejectedWithError(
+      /not a server file/,
+    );
+  });
   it("finds executable files and ignores missing candidates", () => {
     const name = path.basename(process.execPath, path.extname(process.execPath));
     expect(server.findOnPath(name, { PATH: path.dirname(process.execPath) })).toBe(

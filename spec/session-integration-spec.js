@@ -168,9 +168,14 @@ liveSuite("ide-csharp real editor integration", () => {
     lumine.config.set("ide-csharp.features.hover", false);
     expect(await main.provideHover().hover(editor, at("Twice(3)", 1))).toBeNull();
     lumine.config.set("ide-csharp.features.hover", true);
-    expect((await main.provideHover().hover(editor, at("Twice(3)", 1))).contents.value).toContain(
-      "Twice",
-    );
+    expect(
+      (
+        await until(async () => {
+          const value = await main.provideHover().hover(editor, at("Twice(3)", 1));
+          return value?.contents.value.includes("Twice") ? value : null;
+        }, "hover after feature re-enabling")
+      ).contents.value,
+    ).toContain("Twice");
     await lumine.packages.deactivatePackage("ide-csharp");
     await until(() => session.state === "stopped", "Roslyn process teardown");
     expect(service.adaptersForEditor(editor)).toEqual([]);
@@ -187,8 +192,13 @@ liveSuite("ide-csharp real editor integration", () => {
       "fresh Roslyn generation",
     );
     expect(replacement).not.toBe(session);
-    expect((await main.provideHover().hover(editor, at("Twice(3)", 1))).contents.value).toContain(
-      "Twice",
-    );
+    expect(
+      (
+        await until(async () => {
+          const value = await main.provideHover().hover(editor, at("Twice(3)", 1));
+          return value?.contents.value.includes("Twice") ? value : null;
+        }, "hover after package reload")
+      ).contents.value,
+    ).toContain("Twice");
   });
 });
