@@ -30,7 +30,7 @@ describe("ide-csharp adapter and NuGet management", () => {
     edge?.dispose();
     for (const key of changed) lumine.config.unset(`ide-csharp.${key}`);
     await lumine.packages.deactivatePackage("ide-csharp");
-    removeProject(scratch);
+    await removeProject(scratch);
   });
   it("returns the provider edge disposable and registers the C# grammar", () => {
     expect(edge.dispose).not.toHaveBeenCalled();
@@ -197,6 +197,60 @@ describe("ide-csharp adapter and NuGet management", () => {
     );
     expect(server.findOnPath("absent-roslyn", { PATH: scratch })).toBeNull();
   });
+  it("launches the chosen official tool's adjacent engine instead of its relay", async () => {
+    const relay = path.join(scratch, "roslyn-language-server.dll");
+    const engine = path.join(scratch, "Microsoft.CodeAnalysis.LanguageServer.dll");
+    fs.writeFileSync(relay, "relay");
+    fs.writeFileSync(engine, "engine");
+    validRuntime();
+    const launch = await server.resolveServer(
+      relay,
+      { modulePath: "/other/engine.dll" },
+      process.execPath,
+    );
+    expect(launch.args[0]).toBe(engine);
+  });
+  it("resolves a unique .NET tool payload and refuses to guess between versions", async () => {
+    const shim = path.join(
+      scratch,
+      process.platform === "win32" ? "roslyn-language-server.exe" : "roslyn-language-server",
+    );
+    fs.writeFileSync(shim, "shim");
+    const payload = path.join(scratch, ".store", server.packageFor().name);
+    const engine = (version) =>
+      path.join(
+        payload,
+        version,
+        "tools",
+        "net10.0",
+        server.packageFor().target,
+        "Microsoft.CodeAnalysis.LanguageServer.dll",
+      );
+    fs.mkdirSync(path.dirname(engine("5.12.0-1.26475.2")), { recursive: true });
+    fs.writeFileSync(engine("5.12.0-1.26475.2"), "engine");
+    expect(await server.engineFor(shim)).toBe(engine("5.12.0-1.26475.2"));
+    fs.mkdirSync(path.dirname(engine("5.11.0-1.26380.4")), { recursive: true });
+    fs.writeFileSync(engine("5.11.0-1.26380.4"), "older engine");
+    await expectAsync(server.engineFor(shim)).toBeRejectedWithError(/Several Roslyn tool versions/);
+  });
+  it("reads the SDK Windows shim's exact target without running it or choosing a newer version", async () => {
+    const shim = path.join(scratch, "roslyn-language-server.cmd");
+    const relative = `.store/roslyn-language-server/5.11.0-1.26380.4/${server.packageFor().name}/5.11.0-1.26380.4/tools/net10.0/${server.packageFor().target}/roslyn-language-server.exe`;
+    const engine = path.join(
+      scratch,
+      path.dirname(relative),
+      "Microsoft.CodeAnalysis.LanguageServer.dll",
+    );
+    fs.mkdirSync(path.dirname(engine), { recursive: true });
+    fs.writeFileSync(engine, "selected engine");
+    fs.writeFileSync(shim, `@echo off\r\n"%~dp0${relative.replaceAll("/", "\\")}" %*\r\n`);
+    const newer = engine.replaceAll("5.11.0-1.26380.4", "5.12.0-1.26475.2");
+    fs.mkdirSync(path.dirname(newer), { recursive: true });
+    fs.writeFileSync(newer, "newer engine");
+    expect(await server.engineFor(shim)).toBe(engine);
+    fs.writeFileSync(shim, "echo custom script\n");
+    await expectAsync(server.engineFor(shim)).toBeRejectedWithError(/Several Roslyn tool versions/);
+  });
   it("selects the exact official package for six supported platforms", () => {
     for (const [platform, target] of [
       ["win32", "win"],
@@ -245,7 +299,10 @@ describe("ide-csharp adapter and NuGet management", () => {
       downloadFile: jasmine.createSpy("download").and.callFake(async (_url, directory) => {
         const payload = path.join(directory, "tools", "net10.0", server.packageFor().target);
         fs.mkdirSync(payload, { recursive: true });
-        fs.writeFileSync(path.join(payload, "roslyn-language-server.dll"), "fixture");
+        fs.writeFileSync(
+          path.join(payload, "Microsoft.CodeAnalysis.LanguageServer.dll"),
+          "fixture",
+        );
       }),
       makeFileExecutable: jasmine.createSpy("executable").and.resolveTo(),
     };
@@ -262,7 +319,12 @@ describe("ide-csharp adapter and NuGet management", () => {
       digest: installed.checksum,
     });
     expect(installed.module).toBe(
-      path.join("tools", "net10.0", server.packageFor().target, "roslyn-language-server.dll"),
+      path.join(
+        "tools",
+        "net10.0",
+        server.packageFor().target,
+        "Microsoft.CodeAnalysis.LanguageServer.dll",
+      ),
     );
     expect(api.makeFileExecutable).toHaveBeenCalled();
   });

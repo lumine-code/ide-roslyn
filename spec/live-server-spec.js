@@ -41,7 +41,7 @@ liveSuite("ide-csharp real Roslyn protocol", () => {
       lumine.config.unset(`ide-csharp.${key}`);
     await lumine.packages.deactivatePackage("ide-csharp");
     await lumine.packages.deactivatePackage("ide-client");
-    removeProject(rootPath);
+    await removeProject(rootPath);
   });
   it("serves compiler diagnostics, every supported language feature and project references", async () => {
     const fixture = createProject(rootPath);

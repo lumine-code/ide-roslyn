@@ -57,7 +57,7 @@ liveSuite("ide-csharp real editor integration", () => {
       lumine.config.unset(`ide-csharp.${key}`);
     lumine.project.setPaths(previousPaths);
     await lumine.fileWatchClient.settlePendingTeardown();
-    removeProject(rootPath);
+    await removeProject(rootPath);
     editor = null;
   });
   it("routes language features, applies Unicode workspace edits and reattaches after unload", async () => {
@@ -88,6 +88,15 @@ liveSuite("ide-csharp real editor integration", () => {
       const p = position(editor.getText(), fragment, inside);
       return new Point(p.line, p.character);
     };
+    const rawHover = await session.request("textDocument/hover", {
+      textDocument: { uri: fixture.uri },
+      position: position(editor.getText(), "Double(3)", 1),
+    });
+    expect(JSON.stringify(rawHover)).toContain("Calculator.Double");
+    if (!session.supports("textDocument/hover", editor))
+      throw new Error(
+        `C# hover routing suppressed despite static capability ${session.capabilities.hoverProvider}; registrations: ${JSON.stringify([...session.manager.dynamicCapabilities.get(session).values()].filter(({ method }) => method === "textDocument/hover"))}`,
+      );
     const suggestions = await main.provideAutocomplete().getSuggestions({
       editor,
       bufferPosition: at("Double(3)", 3),
@@ -126,7 +135,9 @@ liveSuite("ide-csharp real editor integration", () => {
     expect(references.references.length).toBeGreaterThanOrEqual(2);
     const hints = await main.provideInlayHints().inlayHints(editor, [0, editor.getLastBufferRow()]);
     expect(hints.some(({ label }) => label.includes("value"))).toBe(true);
-    const tokens = await main.provideSemanticTokens().semanticTokens(editor);
+    const tokens = await main
+      .provideSemanticTokens()
+      .semanticTokensInRange(editor, [0, editor.getLastBufferRow()]);
     expect(tokens.length).toBeGreaterThan(0);
     expect(session.supports("textDocument/codeLens", editor)).toBe(false);
     const intentions = await main
@@ -141,7 +152,7 @@ liveSuite("ide-csharp real editor integration", () => {
       .rename(editor, at("Double(3)", 1), "Twice", { dryRun: true });
     expect(rename.outcome).toBe("edits");
     const renameEdits = [...rename.edits.values()].flat();
-    const uri = service.uriForEditor(editor);
+    const uri = fixture.uri;
     const applied = await service.applyWorkspaceEdit(
       {
         changes: {
@@ -193,7 +204,7 @@ liveSuite("ide-csharp real editor integration", () => {
       ["rename", "textDocument/rename"],
       ["codeActions", "textDocument/codeAction"],
       ["inlayHints", "textDocument/inlayHint"],
-      ["semanticTokens", "textDocument/semanticTokens/full"],
+      ["semanticTokens", "textDocument/semanticTokens"],
       ["callHierarchy", "textDocument/prepareCallHierarchy"],
       ["typeHierarchy", "textDocument/prepareTypeHierarchy"],
       ["diagnostics", "textDocument/diagnostic"],

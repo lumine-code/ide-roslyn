@@ -61,7 +61,7 @@ const prepareProject = (fixture, dotnet) =>
   new Promise((resolve, reject) =>
     execFile(
       dotnet,
-      ["restore", fixture.projectPath],
+      ["restore", fixture.projectPath, "--disable-build-servers"],
       {
         timeout: 90000,
         windowsHide: true,
@@ -70,6 +70,8 @@ const prepareProject = (fixture, dotnet) =>
           DOTNET_ROOT: path.dirname(dotnet),
           DOTNET_CLI_TELEMETRY_OPTOUT: "1",
           DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1",
+          MSBUILDDISABLENODEREUSE: "1",
+          DOTNET_CLI_USE_MSBUILD_SERVER: "0",
         },
       },
       (error, stdout, stderr) =>
@@ -83,6 +85,11 @@ const removeProject = (rootPath) => {
   const absolute = path.resolve(rootPath);
   if (path.dirname(absolute) !== parent || !path.basename(absolute).startsWith("ide-csharp-"))
     throw new Error(`Refusing to remove unexpected fixture path '${absolute}'.`);
-  fs.rmSync(absolute, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  return fs.promises.rm(absolute, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
 };
 module.exports = { source, position, createProject, prepareProject, removeProject };

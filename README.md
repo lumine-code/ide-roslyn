@@ -23,7 +23,7 @@ Install `ide-client`, `language-csharp` and a [.NET 10 SDK](https://dotnet.micro
 
 Use `ide-client:manage-servers` to install Roslyn, or install the official tool with `dotnet tool install --global roslyn-language-server --prerelease`. Managed installation uses Microsoft's official `roslyn-language-server.<platform>` packages from NuGet, including their MIT license and the whole build host tree. It follows the current prerelease distribution because Microsoft has not published a stable version of this standalone tool. It does not install a .NET SDK or copy binaries from an editor extension.
 
-Managed builds are available for Windows, Linux and macOS on x64 and ARM64. Server Path also accepts the official tool DLL; .NET Path chooses the runtime that launches it. Installing or removing a managed server leaves your SDKs, project dependencies and separately installed servers intact.
+Managed builds are available for Windows, Linux and macOS on x64 and ARM64. The adapter launches Microsoft.CodeAnalysis.LanguageServer.dll directly from the official package, so the editor owns the process that loads MSBuild. It resolves that engine beside an explicitly selected tool, from the SDK's Windows command shim, or from a unique .NET tool installation. If a shim does not identify one installation, select the desired engine DLL explicitly. .NET Path chooses the runtime that launches it. Installing or removing a managed server leaves your SDKs, project dependencies and separately installed servers intact.
 
 ## Usage
 
