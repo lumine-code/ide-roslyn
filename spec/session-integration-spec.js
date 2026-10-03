@@ -3,6 +3,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { createProject, prepareProject, position, removeProject } = require("./helpers/project");
 const { serverPath, dotnetPath, liveSuite } = require("./helpers/environment");
+const { sameFile } = require("./helpers/exercise-server");
 const until = async (check, label) => {
   const deadline = Date.now() + 90000;
   while (Date.now() < deadline) {
@@ -173,7 +174,7 @@ liveSuite("ide-csharp real editor integration", () => {
     expect(editor.getText()).toContain("😀");
     await until(() => {
       const items = diagnostics
-        .filter(({ session: owner }) => owner === session)
+        .filter(({ session: owner, uri }) => owner === session && sameFile(uri, fixture.filePath))
         .at(-1)?.diagnostics;
       return (
         items &&
