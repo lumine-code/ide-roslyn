@@ -3,11 +3,11 @@ const os = require("node:os");
 const path = require("node:path");
 const { removeProject } = require("./helpers/project");
 
-describe("ide-csharp adapter and NuGet management", () => {
+describe("ide-roslyn adapter and NuGet management", () => {
   let main, server, adapter, edge, changed, scratch;
   const configure = (name, value) => {
     changed.add(name);
-    lumine.config.set(`ide-csharp.${name}`, value);
+    lumine.config.set(`ide-roslyn.${name}`, value);
   };
   const register = () => {
     edge = main.consumeIdeClient({
@@ -20,27 +20,27 @@ describe("ide-csharp adapter and NuGet management", () => {
   };
   beforeEach(async () => {
     jasmine.useRealClock();
-    main = (await lumine.packages.activatePackage("ide-csharp")).mainModule;
+    main = (await lumine.packages.activatePackage("ide-roslyn")).mainModule;
     server = require("../lib/server");
     changed = new Set();
-    scratch = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-csharp-unit-"));
+    scratch = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-roslyn-unit-"));
     register();
   });
   afterEach(async () => {
     edge?.dispose();
-    for (const key of changed) lumine.config.unset(`ide-csharp.${key}`);
-    await lumine.packages.deactivatePackage("ide-csharp");
+    for (const key of changed) lumine.config.unset(`ide-roslyn.${key}`);
+    await lumine.packages.deactivatePackage("ide-roslyn");
     await removeProject(scratch);
   });
   it("returns the provider edge disposable and registers the C# grammar", () => {
     expect(edge.dispose).not.toHaveBeenCalled();
-    expect(adapter.id).toBe("ide-csharp");
+    expect(adapter.id).toBe("ide-roslyn");
     expect(adapter.grammarScopes).toEqual(["source.cs"]);
     expect(adapter.languageId).toBe("csharp");
     expect(adapter.sessionScope).toBe("project-root");
     expect(adapter.installServer).toBe(server.installServer);
     expect(adapter.managedServer).toBeUndefined();
-    expect(adapter.restartKeyPaths).toEqual(["ide-csharp.serverPath", "ide-csharp.dotnetPath"]);
+    expect(adapter.restartKeyPaths).toEqual(["ide-roslyn.serverPath", "ide-roslyn.dotnetPath"]);
   });
   it("owns one useful tip and independent provider edges", () => {
     const first = { dispose: jasmine.createSpy("first") },
@@ -49,16 +49,16 @@ describe("ide-csharp adapter and NuGet management", () => {
     expect(main.consumeIdeClient({ registerAdapter: () => second })).toBe(second);
     first.dispose();
     expect(second.dispose).not.toHaveBeenCalled();
-    expect(main.provideBackgroundTips().packageName).toBe("ide-csharp");
+    expect(main.provideBackgroundTips().packageName).toBe("ide-roslyn");
     expect(main.provideBackgroundTips().tips.length).toBe(1);
   });
   it("reacquires the current generation after awaited unload and reload", async () => {
     const previous = main;
     edge.dispose();
-    await lumine.packages.deactivatePackage("ide-csharp");
-    await lumine.packages.unloadPackage("ide-csharp");
-    lumine.packages.loadPackage("ide-csharp");
-    main = (await lumine.packages.activatePackage("ide-csharp")).mainModule;
+    await lumine.packages.deactivatePackage("ide-roslyn");
+    await lumine.packages.unloadPackage("ide-roslyn");
+    lumine.packages.loadPackage("ide-roslyn");
+    main = (await lumine.packages.activatePackage("ide-roslyn")).mainModule;
     server = require("../lib/server");
     register();
     expect(main).not.toBe(previous);
@@ -104,7 +104,7 @@ describe("ide-csharp adapter and NuGet management", () => {
     });
     spyOn(server, "resolveServer").and.resolveTo(null);
     expect(await adapter.resolveServer({ rootPath: scratch })).toBeNull();
-    expect(missing.calls.argsFor(0)[0]).toBe("ide-csharp");
+    expect(missing.calls.argsFor(0)[0]).toBe("ide-roslyn");
     expect(missing.calls.argsFor(0)[1].description).toContain(".NET 10 SDK");
   });
   const validRuntime = () =>

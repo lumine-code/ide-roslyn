@@ -83,7 +83,7 @@ const prepareProject = (fixture, dotnet) =>
 const removeProject = (rootPath) => {
   const parent = fs.realpathSync.native(os.tmpdir());
   const absolute = path.resolve(rootPath);
-  if (path.dirname(absolute) !== parent || !path.basename(absolute).startsWith("ide-csharp-"))
+  if (path.dirname(absolute) !== parent || !path.basename(absolute).startsWith("ide-roslyn-"))
     throw new Error(`Refusing to remove unexpected fixture path '${absolute}'.`);
   return fs.promises.rm(absolute, {
     recursive: true,

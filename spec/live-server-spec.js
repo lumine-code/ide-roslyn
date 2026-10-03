@@ -6,7 +6,7 @@ const { createProject, prepareProject, removeProject } = require("./helpers/proj
 const { exerciseServer } = require("./helpers/exercise-server");
 const { serverPath, dotnetPath, liveSuite } = require("./helpers/environment");
 
-liveSuite("ide-csharp real Roslyn protocol", () => {
+liveSuite("ide-roslyn real Roslyn protocol", () => {
   let rootPath, client, edge, timeout, main;
   beforeAll(() => {
     timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
@@ -17,15 +17,15 @@ liveSuite("ide-csharp real Roslyn protocol", () => {
   });
   beforeEach(async () => {
     jasmine.useRealClock();
-    rootPath = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-csharp-live-"));
-    main = (await lumine.packages.activatePackage("ide-csharp")).mainModule;
+    rootPath = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-roslyn-live-"));
+    main = (await lumine.packages.activatePackage("ide-roslyn")).mainModule;
     for (const [key, value] of Object.entries({
       serverPath,
       dotnetPath,
       parameterHints: "enabled",
       typeHints: "enabled",
     }))
-      lumine.config.set(`ide-csharp.${key}`, value);
+      lumine.config.set(`ide-roslyn.${key}`, value);
     edge = main.consumeIdeClient({
       registerAdapter(adapter) {
         client = new LiveLspClient(adapter, rootPath);
@@ -38,8 +38,8 @@ liveSuite("ide-csharp real Roslyn protocol", () => {
     await client.stop();
     edge.dispose();
     for (const key of ["serverPath", "dotnetPath", "parameterHints", "typeHints"])
-      lumine.config.unset(`ide-csharp.${key}`);
-    await lumine.packages.deactivatePackage("ide-csharp");
+      lumine.config.unset(`ide-roslyn.${key}`);
+    await lumine.packages.deactivatePackage("ide-roslyn");
     await lumine.packages.deactivatePackage("ide-client");
     await removeProject(rootPath);
   });
@@ -66,7 +66,7 @@ liveSuite("ide-csharp real Roslyn protocol", () => {
     );
     const storagePath = path.join(rootPath, "managed");
     const managed = new ManagedServers({}, { storageRoot: storagePath });
-    const adapter = { id: "ide-csharp" };
+    const adapter = { id: "ide-roslyn" };
     const server = require("../lib/server");
     const installed = await server.installServer({
       storagePath,
@@ -80,7 +80,7 @@ liveSuite("ide-csharp real Roslyn protocol", () => {
         path.join(storagePath, "tools", "net10.0", server.packageFor().target, "BuildHost-netcore"),
       ),
     ).toBe(true);
-    lumine.config.set("ide-csharp.serverPath", "");
+    lumine.config.set("ide-roslyn.serverPath", "");
     const { serverInfo } = await client.start({
       modulePath: path.join(storagePath, installed.module),
       version: installed.version,

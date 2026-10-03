@@ -14,7 +14,7 @@ const until = async (check, label) => {
   throw new Error(`${label} timed out`);
 };
 
-liveSuite("ide-csharp real editor integration", () => {
+liveSuite("ide-roslyn real editor integration", () => {
   let rootPath, editor, previousPaths, timeout, service, diagnostics, diagnosticEdge;
   beforeAll(() => {
     timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
@@ -26,15 +26,15 @@ liveSuite("ide-csharp real editor integration", () => {
   beforeEach(async () => {
     jasmine.useRealClock();
     previousPaths = lumine.project.getPaths();
-    rootPath = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-csharp-editor-"));
+    rootPath = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-roslyn-editor-"));
     for (const [key, value] of Object.entries({
       serverPath,
       dotnetPath,
       parameterHints: "enabled",
       typeHints: "enabled",
     }))
-      lumine.config.set(`ide-csharp.${key}`, value);
-    for (const name of ["language-csharp", "ide-client", "ide-csharp"])
+      lumine.config.set(`ide-roslyn.${key}`, value);
+    for (const name of ["language-csharp", "ide-client", "ide-roslyn"])
       await lumine.packages.activatePackage(name);
     service = lumine.packages.getActivePackage("ide-client").mainModule.provideIdeClient();
     diagnostics = [];
@@ -43,7 +43,7 @@ liveSuite("ide-csharp real editor integration", () => {
   afterEach(async () => {
     diagnosticEdge?.dispose();
     editor?.destroy();
-    for (const name of ["ide-csharp", "ide-client", "language-csharp"])
+    for (const name of ["ide-roslyn", "ide-client", "language-csharp"])
       await lumine.packages.deactivatePackage(name);
     for (const key of [
       "serverPath",
@@ -54,7 +54,7 @@ liveSuite("ide-csharp real editor integration", () => {
       "features.hover",
       "features.diagnostics",
     ])
-      lumine.config.unset(`ide-csharp.${key}`);
+      lumine.config.unset(`ide-roslyn.${key}`);
     lumine.project.setPaths(previousPaths);
     await lumine.fileWatchClient.settlePendingTeardown();
     await removeProject(rootPath);
@@ -69,7 +69,7 @@ liveSuite("ide-csharp real editor integration", () => {
     const session = await until(
       async () =>
         (await service.activeSessionsForEditor(editor)).find(
-          ({ adapter }) => adapter.id === "ide-csharp",
+          ({ adapter }) => adapter.id === "ide-roslyn",
         ),
       "Roslyn editor session",
     );
@@ -209,17 +209,17 @@ liveSuite("ide-csharp real editor integration", () => {
       ["typeHierarchy", "textDocument/prepareTypeHierarchy"],
       ["diagnostics", "textDocument/diagnostic"],
     ]) {
-      lumine.config.set(`ide-csharp.features.${feature}`, false);
+      lumine.config.set(`ide-roslyn.features.${feature}`, false);
       expect(await service.activeSessionForFeature(editor, method)).toBeNull();
-      lumine.config.unset(`ide-csharp.features.${feature}`);
+      lumine.config.unset(`ide-roslyn.features.${feature}`);
       expect(await service.activeSessionForFeature(editor, method)).toBe(session);
     }
-    lumine.config.set("ide-csharp.features.format", false);
+    lumine.config.set("ide-roslyn.features.format", false);
     expect(await service.activeSessionForFeature(editor, "textDocument/formatting")).toBeNull();
     expect(await provider.formatEntireFile(editor)).toEqual([]);
-    lumine.config.set("ide-csharp.features.hover", false);
+    lumine.config.set("ide-roslyn.features.hover", false);
     expect(await main.provideHover().hover(editor, at("Twice(3)", 1))).toBeNull();
-    lumine.config.set("ide-csharp.features.hover", true);
+    lumine.config.set("ide-roslyn.features.hover", true);
     expect(
       (
         await until(async () => {
@@ -228,18 +228,18 @@ liveSuite("ide-csharp real editor integration", () => {
         }, "hover after feature re-enabling")
       ).contents.value,
     ).toContain("Twice");
-    await lumine.packages.deactivatePackage("ide-csharp");
+    await lumine.packages.deactivatePackage("ide-roslyn");
     await until(() => session.state === "stopped", "Roslyn process teardown");
     expect(service.adaptersForEditor(editor)).toEqual([]);
-    const previous = lumine.packages.getLoadedPackage("ide-csharp").mainModule;
-    await lumine.packages.unloadPackage("ide-csharp");
-    lumine.packages.loadPackage("ide-csharp");
-    const pkg = await lumine.packages.activatePackage("ide-csharp");
+    const previous = lumine.packages.getLoadedPackage("ide-roslyn").mainModule;
+    await lumine.packages.unloadPackage("ide-roslyn");
+    lumine.packages.loadPackage("ide-roslyn");
+    const pkg = await lumine.packages.activatePackage("ide-roslyn");
     expect(pkg.mainModule).not.toBe(previous);
     const replacement = await until(
       async () =>
         (await service.activeSessionsForEditor(editor)).find(
-          ({ adapter }) => adapter.id === "ide-csharp",
+          ({ adapter }) => adapter.id === "ide-roslyn",
         ),
       "fresh Roslyn generation",
     );

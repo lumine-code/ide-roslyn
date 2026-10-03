@@ -1,15 +1,14 @@
 {
-  "name": "ide-csharp",
+  "name": "ide-roslyn",
   "author": "lumine-code",
   "description": "Provide C# language features with Roslyn.",
-  "repository": "https://github.com/lumine-code/ide-csharp",
+  "repository": "https://github.com/lumine-code/ide-roslyn",
   "bugs": {
-    "url": "https://github.com/lumine-code/ide-csharp/issues"
+    "url": "https://github.com/lumine-code/ide-roslyn/issues"
   },
   "keywords": [
     "c#",
     ".net",
-    "roslyn",
     "msbuild",
     "language-server",
     "lsp",

@@ -1,4 +1,4 @@
-# ide-csharp
+# ide-roslyn
 
 Provide C# language features with Roslyn.
 
@@ -17,7 +17,7 @@ Registers Microsoft's standalone MIT-licensed [Roslyn language server](https://w
 
 ## Installation
 
-To install `ide-csharp` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/ide-csharp`.
+To install `ide-roslyn` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/ide-roslyn`.
 
 Install `ide-client`, `language-csharp` and a [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). Roslyn needs the .NET 10 runtime to start and an SDK to load MSBuild projects. Keep any other SDKs required by project `global.json` files installed too. A portable SDK can be selected through .NET Path without changing your system PATH.
 
