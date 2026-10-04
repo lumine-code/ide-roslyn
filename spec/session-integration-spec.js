@@ -108,9 +108,9 @@ liveSuite("ide-roslyn real editor integration", () => {
         (item.displayText || item.text || item.snippet || "").includes("Double"),
       ),
     ).toBe(true);
-    expect((await main.provideHover().hover(editor, at("Double(3)", 1))).contents.value).toContain(
-      "Calculator.Double",
-    );
+    expect(
+      (await main.provideContextHelp().getHelp(editor, at("Double(3)", 1))).contents.value,
+    ).toContain("Calculator.Double");
     expect(
       (await main.provideHoverSignature().getSignature(editor, at("Double(3)", 7))).signatures[0]
         .label,
@@ -218,12 +218,12 @@ liveSuite("ide-roslyn real editor integration", () => {
     expect(await service.activeSessionForFeature(editor, "textDocument/formatting")).toBeNull();
     expect(await provider.formatEntireFile(editor)).toEqual([]);
     lumine.config.set("ide-roslyn.features.hover", false);
-    expect(await main.provideHover().hover(editor, at("Twice(3)", 1))).toBeNull();
+    expect(await main.provideContextHelp().getHelp(editor, at("Twice(3)", 1))).toBeNull();
     lumine.config.set("ide-roslyn.features.hover", true);
     expect(
       (
         await until(async () => {
-          const value = await main.provideHover().hover(editor, at("Twice(3)", 1));
+          const value = await main.provideContextHelp().getHelp(editor, at("Twice(3)", 1));
           return value?.contents.value.includes("Twice") ? value : null;
         }, "hover after feature re-enabling")
       ).contents.value,
@@ -247,7 +247,7 @@ liveSuite("ide-roslyn real editor integration", () => {
     expect(
       (
         await until(async () => {
-          const value = await main.provideHover().hover(editor, at("Twice(3)", 1));
+          const value = await main.provideContextHelp().getHelp(editor, at("Twice(3)", 1));
           return value?.contents.value.includes("Twice") ? value : null;
         }, "hover after package reload")
       ).contents.value,
