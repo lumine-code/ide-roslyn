@@ -216,7 +216,7 @@ liveSuite("ide-roslyn real editor integration", () => {
     }
     lumine.config.set("ide-roslyn.features.format", false);
     expect(await service.activeSessionForFeature(editor, "textDocument/formatting")).toBeNull();
-    expect(await provider.formatEntireFile(editor)).toEqual([]);
+    expect(await provider.formatEntireFile(editor)).toBeNull();
     lumine.config.set("ide-roslyn.features.hover", false);
     expect(await main.provideContextHelp().getHelp(editor, at("Twice(3)", 1))).toBeNull();
     lumine.config.set("ide-roslyn.features.hover", true);
