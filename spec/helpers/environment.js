@@ -1,4 +1,4 @@
-const { findOnPath } = require("../../lib/server");
+const { findOnPath } = require("./server-resolution");
 const serverPath = process.env.CSHARP_SERVER_PATH || findOnPath("roslyn-language-server");
 const dotnetPath = process.env.CSHARP_DOTNET_PATH || findOnPath("dotnet");
 if (process.env.REQUIRE_ROSLYN && (!serverPath || !dotnetPath))

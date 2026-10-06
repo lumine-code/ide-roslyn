@@ -1,3 +1,4 @@
+const { resolutionContext } = require("./server-resolution");
 const childProcess = require("child_process");
 const path = require("path");
 const { configurationContext, workspaceConfiguration } = require(
@@ -38,7 +39,9 @@ class LiveLspClient {
   }
 
   async start(managedServer) {
-    const launch = await this.adapter.resolveServer({ rootPath: this.rootPath, managedServer });
+    const launch = await this.adapter.resolveServer(
+      resolutionContext({ rootPath: this.rootPath, managedServer }),
+    );
     this.launch = launch;
     this.child = childProcess.spawn(launch.command, launch.args || [], {
       cwd: launch.cwd || this.rootPath,

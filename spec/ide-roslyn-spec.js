@@ -1,10 +1,11 @@
+const { resolutionContext, findOnPath } = require("./helpers/server-resolution");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { removeProject } = require("./helpers/project");
 
 describe("ide-roslyn adapter and NuGet management", () => {
-  let main, server, adapter, edge, changed, scratch;
+  let main, server, adapter, edge, changed, scratch, resolver;
   const configure = (name, value) => {
     changed.add(name);
     lumine.config.set(`ide-roslyn.${name}`, value);
@@ -24,6 +25,7 @@ describe("ide-roslyn adapter and NuGet management", () => {
     server = require("../lib/server");
     changed = new Set();
     scratch = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), "ide-roslyn-unit-"));
+    resolver = resolutionContext().resolver;
     register();
   });
   afterEach(async () => {
@@ -117,87 +119,134 @@ describe("ide-roslyn adapter and NuGet management", () => {
     );
   it("prefers an explicit executable over managed and PATH without changing process environment", async () => {
     validRuntime();
-    spyOn(server, "findOnPath");
+    spyOn(resolver, "select").and.callThrough();
     const previous = process.env.DOTNET_ROOT;
     const launch = await server.resolveServer(
-      process.execPath,
-      { binaryPath: "/managed/roslyn" },
-      process.execPath,
+      resolutionContext({ managedServer: { binaryPath: "/managed/roslyn" }, resolver }),
+      { serverPath: process.execPath, dotnetPath: process.execPath },
     );
     expect(launch.command).toBe(process.execPath);
     expect(launch.args).toEqual(["--stdio", "--autoLoadProjects", "--telemetryLevel", "off"]);
     expect(launch.env.DOTNET_HOST_PATH).toBe(process.execPath);
     expect(process.env.DOTNET_ROOT).toBe(previous);
-    expect(server.findOnPath).not.toHaveBeenCalled();
+    expect(resolver.select.calls.count()).toBe(2);
   });
   it("launches the managed DLL with the selected dotnet runtime", async () => {
     const modulePath = path.join(scratch, "roslyn.dll");
     fs.writeFileSync(modulePath, "fixture");
     validRuntime();
-    spyOn(server, "findOnPath");
+    spyOn(resolver, "select").and.callThrough();
     const launch = await server.resolveServer(
-      "",
-      { modulePath, version: "5.12.0-1.26475.2" },
-      process.execPath,
+      resolutionContext({ managedServer: { modulePath, version: "5.12.0-1.26475.2" }, resolver }),
+      { serverPath: "", dotnetPath: process.execPath },
     );
     expect(launch.command).toBe(process.execPath);
     expect(launch.args[0]).toBe(modulePath);
     expect(launch.version).toBe("5.12.0-1.26475.2");
-    expect(server.findOnPath).not.toHaveBeenCalled();
+    expect(resolver.select.calls.count()).toBe(2);
   });
   it("discovers PATH only after explicit and managed settings are absent", async () => {
     validRuntime();
-    spyOn(server, "findOnPath").and.returnValue(process.execPath);
-    expect((await server.resolveServer("", null)).command).toBe(process.execPath);
-    expect(server.findOnPath).toHaveBeenCalledWith("roslyn-language-server");
-    expect(server.findOnPath).toHaveBeenCalledWith("dotnet");
+    const select = resolver.select;
+    spyOn(resolver, "select").and.callFake((options) =>
+      select({ ...options, names: [], candidates: [process.execPath] }),
+    );
+    expect(
+      (
+        await server.resolveServer(resolutionContext({ managedServer: null, resolver }), {
+          serverPath: "",
+          dotnetPath: "",
+        })
+      ).command,
+    ).toBe(process.execPath);
+    expect(resolver.select.calls.argsFor(0)[0].names).toEqual(["roslyn-language-server"]);
+    expect(resolver.select.calls.argsFor(1)[0].names).toEqual(["dotnet"]);
   });
   it("returns null for no server and never replaces an invalid explicit path", async () => {
-    spyOn(server, "findOnPath").and.returnValue(null);
-    expect(await server.resolveServer("", null, process.execPath)).toBeNull();
+    resolver = resolutionContext({ environment: { PATH: "" } }).resolver;
+    spyOn(resolver, "select").and.callThrough();
+    expect(
+      await server.resolveServer(resolutionContext({ managedServer: null, resolver }), {
+        serverPath: "",
+        dotnetPath: process.execPath,
+      }),
+    ).toBeNull();
     await expectAsync(
       server.resolveServer(
-        path.join(scratch, "absent.dll"),
-        { binaryPath: process.execPath },
-        process.execPath,
+        resolutionContext({ managedServer: { binaryPath: process.execPath }, resolver }),
+        { serverPath: path.join(scratch, "absent.dll"), dotnetPath: process.execPath },
       ),
     ).toBeRejected();
-    expect(server.findOnPath.calls.count()).toBe(1);
+    expect(resolver.select.calls.count()).toBe(2);
   });
   it("explains missing runtime and SDK requirements before launching", async () => {
     spyOn(server, "run").and.resolveTo("Microsoft.NETCore.App 8.0.30 [runtime]");
     await expectAsync(
-      server.resolveServer(process.execPath, null, process.execPath),
+      server.resolveServer(resolutionContext({ managedServer: null, resolver }), {
+        serverPath: process.execPath,
+        dotnetPath: process.execPath,
+      }),
     ).toBeRejectedWithError(/\.NET 10 runtime/);
     server.run.and.callFake(async (_command, args) =>
       args[0] === "--list-runtimes" ? "Microsoft.NETCore.App 10.0.12 [runtime]" : "",
     );
     await expectAsync(
-      server.resolveServer(process.execPath, null, process.execPath),
+      server.resolveServer(resolutionContext({ managedServer: null, resolver }), {
+        serverPath: process.execPath,
+        dotnetPath: process.execPath,
+      }),
     ).toBeRejectedWithError(/installed .NET SDK/);
+  });
+  it("continues past an older discovered dotnet host to a supported SDK", async () => {
+    const folders = ["old-dotnet", "supported-dotnet"].map((name) => path.join(scratch, name));
+    const native = process.platform === "win32" ? "dotnet.exe" : "dotnet";
+    for (const folder of folders) {
+      fs.mkdirSync(folder);
+      fs.copyFileSync(process.execPath, path.join(folder, native));
+      fs.chmodSync(path.join(folder, native), 0o755);
+    }
+    spyOn(server, "run").and.callFake(async (command, args) =>
+      args[0] === "--list-runtimes"
+        ? `Microsoft.NETCore.App ${command.startsWith(folders[0]) ? "8.0.30" : "10.0.12"} [runtime]\n`
+        : "10.0.401 [sdk]\n",
+    );
+    const context = resolutionContext({ environment: { PATH: folders.join(path.delimiter) } });
+    const launch = await server.resolveServer(context, { serverPath: process.execPath });
+    expect(launch.env.DOTNET_HOST_PATH).toBe(path.join(folders[1], native));
+    await expectAsync(
+      server.resolveServer(context, {
+        serverPath: process.execPath,
+        dotnetPath: path.join(folders[0], native),
+      }),
+    ).toBeRejectedWithError(/\.NET 10 runtime/);
   });
   it("derives the runtime root from the real dotnet host and rejects directories", async () => {
     validRuntime();
     const canonical = await fs.promises.realpath(process.execPath);
     const link = path.join(scratch, process.platform === "win32" ? "dotnet.exe" : "dotnet");
+    fs.copyFileSync(process.execPath, link);
     // Test canonical host selection without requiring Windows symlink privileges.
     spyOn(fs.promises, "realpath").and.callFake(async (file) => (file === link ? canonical : file));
     spyOn(fs.promises, "access").and.resolveTo();
     const modulePath = path.join(scratch, "roslyn.dll");
     fs.writeFileSync(modulePath, "fixture");
-    const launch = await server.resolveServer(modulePath, null, link);
+    const launch = await server.resolveServer(
+      resolutionContext({ managedServer: null, resolver }),
+      { serverPath: modulePath, dotnetPath: link },
+    );
     expect(launch.command).toBe(canonical);
     expect(launch.env.DOTNET_ROOT).toBe(path.dirname(canonical));
-    await expectAsync(server.resolveServer(scratch, null, process.execPath)).toBeRejectedWithError(
-      /not a server file/,
-    );
+    await expectAsync(
+      server.resolveServer(resolutionContext({ managedServer: null, resolver }), {
+        serverPath: scratch,
+        dotnetPath: process.execPath,
+      }),
+    ).toBeRejectedWithError(/must name a file/);
   });
   it("finds executable files and ignores missing candidates", () => {
     const name = path.basename(process.execPath, path.extname(process.execPath));
-    expect(server.findOnPath(name, { PATH: path.dirname(process.execPath) })).toBe(
-      process.execPath,
-    );
-    expect(server.findOnPath("absent-roslyn", { PATH: scratch })).toBeNull();
+    expect(findOnPath(name, { PATH: path.dirname(process.execPath) })).toBe(process.execPath);
+    expect(findOnPath("absent-roslyn", { PATH: scratch })).toBeNull();
   });
   it("launches the chosen official tool's adjacent engine instead of its relay", async () => {
     const relay = path.join(scratch, "roslyn-language-server.dll");
@@ -206,9 +255,8 @@ describe("ide-roslyn adapter and NuGet management", () => {
     fs.writeFileSync(engine, "engine");
     validRuntime();
     const launch = await server.resolveServer(
-      relay,
-      { modulePath: "/other/engine.dll" },
-      process.execPath,
+      resolutionContext({ managedServer: { modulePath: "/other/engine.dll" }, resolver }),
+      { serverPath: relay, dotnetPath: process.execPath },
     );
     expect(launch.args[0]).toBe(engine);
   });
