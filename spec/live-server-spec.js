@@ -26,7 +26,7 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
       typeHints: "enabled",
     }))
       lumine.config.set(`ide-roslyn.${key}`, value);
-    edge = main.consumeIdeClient({
+    edge = main.consumeIde({
       registerAdapter(adapter) {
         client = new LiveLspClient(adapter, rootPath);
         return { dispose() {} };
@@ -40,7 +40,7 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
     for (const key of ["serverPath", "dotnetPath", "parameterHints", "typeHints"])
       lumine.config.unset(`ide-roslyn.${key}`);
     await lumine.packages.deactivatePackage("ide-roslyn");
-    await lumine.packages.deactivatePackage("ide-client");
+    await lumine.packages.deactivatePackage("ide");
     await removeProject(rootPath);
   });
   it("serves compiler diagnostics, every supported language feature and project references", async () => {
@@ -56,13 +56,13 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
   it("downloads the verified official NuGet package and runs its managed DLL", async () => {
     const fixture = createProject(rootPath);
     await prepareProject(fixture, dotnetPath);
-    await lumine.packages.activatePackage("ide-client");
-    const service = lumine.packages.getActivePackage("ide-client").mainModule.provideIdeClient();
+    await lumine.packages.activatePackage("ide");
+    const service = lumine.packages.getActivePackage("ide").mainModule.provideIde();
     const ManagedServers = require(
-      path.join(lumine.packages.getActivePackage("ide-client").path, "lib", "managed-servers"),
+      path.join(lumine.packages.getActivePackage("ide").path, "lib", "managed-servers"),
     );
     const InstallApi = require(
-      path.join(lumine.packages.getActivePackage("ide-client").path, "lib", "install-api"),
+      path.join(lumine.packages.getActivePackage("ide").path, "lib", "install-api"),
     );
     const storagePath = path.join(rootPath, "managed");
     const managed = new ManagedServers({}, { storageRoot: storagePath });
@@ -89,7 +89,7 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
     const covered = await exerciseServer(client, fixture);
     expect(covered).toContain("code action edits");
     expect(service).toBeTruthy();
-    await lumine.packages.deactivatePackage("ide-client");
+    await lumine.packages.deactivatePackage("ide");
     managed.emitter.dispose();
   });
 });

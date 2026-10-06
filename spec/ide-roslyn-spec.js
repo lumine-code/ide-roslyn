@@ -11,7 +11,7 @@ describe("ide-roslyn adapter and NuGet management", () => {
     lumine.config.set(`ide-roslyn.${name}`, value);
   };
   const register = () => {
-    edge = main.consumeIdeClient({
+    edge = main.consumeIde({
       registerAdapter(value) {
         adapter = value;
         return { dispose: jasmine.createSpy("dispose") };
@@ -47,8 +47,8 @@ describe("ide-roslyn adapter and NuGet management", () => {
   it("owns one useful tip and independent provider edges", () => {
     const first = { dispose: jasmine.createSpy("first") },
       second = { dispose: jasmine.createSpy("second") };
-    expect(main.consumeIdeClient({ registerAdapter: () => first })).toBe(first);
-    expect(main.consumeIdeClient({ registerAdapter: () => second })).toBe(second);
+    expect(main.consumeIde({ registerAdapter: () => first })).toBe(first);
+    expect(main.consumeIde({ registerAdapter: () => second })).toBe(second);
     first.dispose();
     expect(second.dispose).not.toHaveBeenCalled();
     expect(main.provideBackgroundTips().packageName).toBe("ide-roslyn");
@@ -99,7 +99,7 @@ describe("ide-roslyn adapter and NuGet management", () => {
   });
   it("reports missing servers through the client", async () => {
     const missing = jasmine.createSpy("missing");
-    main.consumeIdeClient({
+    main.consumeIde({
       registerAdapter(value) {
         adapter = value;
         return edge;

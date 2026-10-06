@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 60
     env:
       LUMINE_JASMINE_REPORTER: list
-      LUMINE_TEST_PACKAGES: ide-client language-csharp
+      LUMINE_TEST_PACKAGES: ide language-csharp
       ROSLYN_VERSION: 5.12.0-1.26475.2
       REQUIRE_ROSLYN: 1
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -55,8 +55,8 @@ jobs:
           path: lumine
       - uses: actions/checkout@v7
         with:
-          repository: lumine-code/ide-client
-          path: ide-client
+          repository: lumine-code/ide
+          path: ide
       - uses: actions/checkout@v7
         with:
           repository: lumine-code/language-csharp
@@ -84,7 +84,7 @@ jobs:
         working-directory: ide-roslyn
         run: npm ci --ignore-scripts
       - name: Install client dependencies
-        working-directory: ide-client
+        working-directory: ide
         run: npm ci --ignore-scripts
       - name: Install editor dependencies
         working-directory: lumine
@@ -100,7 +100,7 @@ jobs:
         run: |
           echo "LUMINE_HOME=$GITHUB_WORKSPACE/.test-home" >> "$GITHUB_ENV"
           mkdir -p "$GITHUB_WORKSPACE/.test-home/packages"
-          ln -s "$GITHUB_WORKSPACE/ide-client" "$GITHUB_WORKSPACE/.test-home/packages/ide-client"
+          ln -s "$GITHUB_WORKSPACE/ide" "$GITHUB_WORKSPACE/.test-home/packages/ide"
           ln -s "$GITHUB_WORKSPACE/language-csharp" "$GITHUB_WORKSPACE/.test-home/packages/language-csharp"
       - name: Run Jasmine specs against the real editor and server
         working-directory: lumine

@@ -34,16 +34,16 @@ liveSuite("ide-roslyn real editor integration", () => {
       typeHints: "enabled",
     }))
       lumine.config.set(`ide-roslyn.${key}`, value);
-    for (const name of ["language-csharp", "ide-client", "ide-roslyn"])
+    for (const name of ["language-csharp", "ide", "ide-roslyn"])
       await lumine.packages.activatePackage(name);
-    service = lumine.packages.getActivePackage("ide-client").mainModule.provideIdeClient();
+    service = lumine.packages.getActivePackage("ide").mainModule.provideIde();
     diagnostics = [];
     diagnosticEdge = service.onDidPublishDiagnostics((event) => diagnostics.push(event));
   });
   afterEach(async () => {
     diagnosticEdge?.dispose();
     editor?.destroy();
-    for (const name of ["ide-roslyn", "ide-client", "language-csharp"])
+    for (const name of ["ide-roslyn", "ide", "language-csharp"])
       await lumine.packages.deactivatePackage(name);
     for (const key of [
       "serverPath",
@@ -82,7 +82,7 @@ liveSuite("ide-roslyn real editor integration", () => {
         ),
       "compiler and analyzer diagnostics aggregated from independent pull providers",
     );
-    const main = lumine.packages.getActivePackage("ide-client").mainModule;
+    const main = lumine.packages.getActivePackage("ide").mainModule;
     const Point = require("lumine").Point;
     const at = (fragment, inside = 0) => {
       const p = position(editor.getText(), fragment, inside);
@@ -118,7 +118,7 @@ liveSuite("ide-roslyn real editor integration", () => {
     const documentProvider = main.provideDocumentSymbolProvider();
     const source = documentProvider
       .getDocumentSymbolSources(editor)
-      .find(({ id }) => id === "ide-client:ide-roslyn");
+      .find(({ id }) => id === "ide:ide-roslyn");
     expect(source.state).toBe("ready");
     const symbols = await documentProvider.getDocumentSymbols(editor, { sourceId: source.id });
     expect(symbols.some(({ name }) => name.startsWith("Double("))).toBe(true);

@@ -3,9 +3,9 @@ const path = require("node:path");
 function resolutionContext(context = {}) {
   const clientPath =
     typeof lumine === "undefined"
-      ? process.env.LUMINE_TEST_CLIENT_PATH
-      : lumine.packages.resolvePackagePath("ide-client");
-  if (!clientPath) throw new Error("Server resolution specs require LUMINE_TEST_CLIENT_PATH.");
+      ? process.env.LUMINE_TEST_IDE_PATH
+      : lumine.packages.resolvePackagePath("ide");
+  if (!clientPath) throw new Error("Server resolution specs require LUMINE_TEST_IDE_PATH.");
   const { createServerResolver } = require(path.join(clientPath, "lib", "server-resolver"));
   const { managedServer = null, ...snapshot } = context;
   return {
