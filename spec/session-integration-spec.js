@@ -115,14 +115,19 @@ liveSuite("ide-roslyn real editor integration", () => {
       (await main.provideHoverSignature().getSignature(editor, at("Double(3)", 7))).signatures[0]
         .label,
     ).toContain("int value");
-    const symbols = await main.provideSymbol().getSymbols({ editor, type: "file" });
+    const documentProvider = main.provideDocumentSymbolProvider();
+    const source = documentProvider
+      .getDocumentSymbolSources(editor)
+      .find(({ id }) => id === "ide-client:ide-roslyn");
+    expect(source.state).toBe("ready");
+    const symbols = await documentProvider.getDocumentSymbols(editor, { sourceId: source.id });
     expect(symbols.some(({ name }) => name.startsWith("Double("))).toBe(true);
     const projectSymbols = await main
-      .provideSymbol()
-      .getSymbols({ editor, type: "project", query: "Double" });
+      .provideWorkspaceSymbolProvider()
+      .searchWorkspaceSymbols("Double");
     expect(projectSymbols.some(({ name }) => name === "Double")).toBe(true);
     editor.setCursorBufferPosition(at("Triple(3)", 1));
-    const definitions = await main.provideSymbol().getSymbols({ editor, type: "project-find" });
+    const definitions = await main.provideDefinitionProvider().getDefinitions(editor);
     expect(
       definitions.some(
         ({ path: target }) => target?.toLowerCase() === fixture.supportPath.toLowerCase(),
