@@ -117,19 +117,28 @@ describe("ide-roslyn adapter and NuGet management", () => {
         ? "Microsoft.NETCore.App 10.0.12 [runtime]\n"
         : "10.0.401 [sdk]\n",
     );
-  it("prefers an explicit executable over managed and PATH without changing process environment", async () => {
+  it("uses an explicit executable without reading a corrupt managed installation", async () => {
     validRuntime();
     spyOn(resolver, "select").and.callThrough();
     const previous = process.env.DOTNET_ROOT;
-    const launch = await server.resolveServer(
-      resolutionContext({ managedServer: { binaryPath: "/managed/roslyn" }, resolver }),
-      { serverPath: process.execPath, dotnetPath: process.execPath },
-    );
+    const getManagedServer = jasmine
+      .createSpy("getManagedServer")
+      .and.throwError("Corrupt managed record");
+    const launch = await server.resolveServer(resolutionContext({ getManagedServer, resolver }), {
+      serverPath: process.execPath,
+      dotnetPath: process.execPath,
+    });
     expect(launch.command).toBe(process.execPath);
     expect(launch.args).toEqual(["--stdio", "--autoLoadProjects", "--telemetryLevel", "off"]);
     expect(launch.env.DOTNET_HOST_PATH).toBe(process.execPath);
     expect(process.env.DOTNET_ROOT).toBe(previous);
     expect(resolver.select.calls.count()).toBe(2);
+    expect(getManagedServer).not.toHaveBeenCalled();
+    await expectAsync(
+      server.resolveServer(resolutionContext({ getManagedServer, resolver }), {
+        dotnetPath: process.execPath,
+      }),
+    ).toBeRejectedWithError("Corrupt managed record");
   });
   it("launches the managed DLL with the selected dotnet runtime", async () => {
     const modulePath = path.join(scratch, "roslyn.dll");

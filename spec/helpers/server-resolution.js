@@ -7,9 +7,11 @@ function resolutionContext(context = {}) {
       : lumine.packages.resolvePackagePath("ide-client");
   if (!clientPath) throw new Error("Server resolution specs require LUMINE_TEST_CLIENT_PATH.");
   const { createServerResolver } = require(path.join(clientPath, "lib", "server-resolver"));
+  const { managedServer = null, ...snapshot } = context;
   return {
     rootPath: process.cwd(),
-    ...context,
+    ...snapshot,
+    getManagedServer: context.getManagedServer || (() => managedServer),
     resolver: context.resolver || {
       ...createServerResolver({ environment: context.environment || process.env }),
     },
