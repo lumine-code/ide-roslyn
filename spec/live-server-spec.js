@@ -7,7 +7,7 @@ const { exerciseServer } = require("./helpers/exercise-server");
 const { serverPath, dotnetPath, liveSuite } = require("./helpers/environment");
 
 liveSuite("ide-roslyn real Roslyn protocol", () => {
-  let rootPath, client, edge, timeout, main;
+  let rootPath, client, edge, timeout, main, managed, manager;
   beforeAll(() => {
     timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 180000;
@@ -37,6 +37,8 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
   afterEach(async () => {
     await client.stop();
     edge.dispose();
+    managed?.dispose();
+    await manager?.deactivate();
     for (const key of ["serverPath", "dotnetPath", "parameterHints", "typeHints"])
       lumine.config.unset(`ide-roslyn.${key}`);
     await lumine.packages.deactivatePackage("ide-roslyn");
@@ -61,17 +63,18 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
     const ManagedServers = require(
       path.join(lumine.packages.getActivePackage("ide").path, "lib", "managed-servers"),
     );
-    const InstallApi = require(
-      path.join(lumine.packages.getActivePackage("ide").path, "lib", "install-api"),
+    const LanguageServerManager = require(
+      path.join(lumine.packages.getActivePackage("ide").path, "lib", "language-server-manager"),
     );
+    manager = new LanguageServerManager();
+    manager.registerAdapter(client.adapter);
     const storagePath = path.join(rootPath, "managed");
-    const managed = new ManagedServers({}, { storageRoot: storagePath });
-    const adapter = { id: "ide-roslyn" };
+    managed = new ManagedServers(manager, { storageRoot: storagePath });
     const server = require("../lib/server");
     const installed = await server.installServer({
       storagePath,
       version: process.env.ROSLYN_VERSION || "5.12.0-1.26475.2",
-      api: new InstallApi(managed, adapter),
+      api: managed.apiFor(client.adapter),
     });
     expect(installed.source).toBe("nuget");
     expect(installed.checksum).toMatch(/^sha512:[0-9a-f]{128}$/);
@@ -90,6 +93,5 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
     expect(covered).toContain("code action edits");
     expect(service).toBeTruthy();
     await lumine.packages.deactivatePackage("ide");
-    managed.emitter.dispose();
   });
 });
