@@ -72,6 +72,8 @@ describe("ide-roslyn adapter and NuGet management", () => {
       ),
     ).toBeUndefined();
     expect(adapter.getWorkspaceConfiguration("editor")).toBeUndefined();
+    expect(adapter.getWorkspaceConfiguration("constructor")).toBeUndefined();
+    expect(adapter.getWorkspaceConfiguration("__proto__")).toBeUndefined();
     configure("parameterHints", "enabled");
     configure("typeHints", "disabled");
     expect(
