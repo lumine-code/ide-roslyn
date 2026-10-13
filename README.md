@@ -15,6 +15,8 @@ Registers Microsoft's standalone MIT-licensed [Roslyn language server](https://w
 - **Managed installation**: downloads the official platform NuGet package and verifies its published SHA512 hash before extracting the complete server and MSBuild payload.
 - **Project support**: discovers solutions and MSBuild projects and keeps their references, analyzers, generated sources and SDK selection intact.
 
+![Roslyn reports a C# type error in a .NET project.](.github/demo.png)
+
 ## Installation
 
 To install `ide-roslyn` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/ide-roslyn`.

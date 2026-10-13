@@ -1,0 +1,17 @@
+{
+  "title": "ide-roslyn",
+  "description": "Roslyn reports a C# type error in a .NET project.",
+  "recordedOn": "2026-10-13",
+  "sourceRevision": "8cd7e1090c2bc5adc98a723a62a797e1f71b41b1",
+  "mode": "normal",
+  "fontSettings": "default",
+  "themeSourceRevision": "6564a9e21899b5541e9c8f8006f9be6d6d72e6ad",
+  "images": [
+    {
+      "file": "demo.png",
+      "label": "Roslyn reports a C# type error in a .NET project.",
+      "width": 1100,
+      "height": 600
+    }
+  ]
+}
