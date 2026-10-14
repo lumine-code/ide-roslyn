@@ -23,8 +23,8 @@ module.exports = {
   },
   async prepare(context) {
     const { lumine, state, fixture, open } = context;
-    state.editor = await open("ide-roslyn/Program.cs");
     await lumine.project.setPaths([fixture("ide-roslyn")]);
+    state.editor = await open("ide-roslyn/Program.cs");
     lumine.grammars.assignLanguageMode(state.editor.getBuffer(), "source.cs");
     await state.editor.getBuffer().getLanguageMode().ready;
     await state.editor.getBuffer().getLanguageMode().atGrammarSettlement?.();
@@ -47,7 +47,7 @@ module.exports = {
                 .getActivePackage("linter")
                 .mainModule.provideMcpTools()[0]
                 .execute({ filePath: state.editor.getPath() })
-                .messages.filter((m) => m.linterName === "Roslyn").length
+                .messages.filter((m) => m.linterName === "Roslyn" && m.severity === "error").length
             )
               break;
             await new Promise((r) => setTimeout(r, 500));
@@ -62,7 +62,7 @@ module.exports = {
             .getActivePackage("linter")
             .mainModule.provideMcpTools()[0]
             .execute({ filePath: state.editor.getPath() })
-            .messages.filter((m) => m.linterName === "Roslyn");
+            .messages.filter((m) => m.linterName === "Roslyn" && m.severity === "error");
           if (!messages.length) throw new Error("No diagnostic from the expected server");
           const message = messages.find((m) => m.severity === "error") || messages[0];
           state.evidence = {
