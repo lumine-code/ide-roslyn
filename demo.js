@@ -5,7 +5,7 @@ module.exports = {
     "language-csharp",
     "marker",
     "linter",
-    "linter-panel",
+    "diagnostics",
     "documentation-view",
     "hover",
     "ide",
@@ -77,12 +77,12 @@ module.exports = {
       },
       async afterPointerMove(context) {
         const { lumine } = context;
-        await lumine.workspace.open("lumine://linter-panel");
+        await lumine.workspace.open("lumine://diagnostics");
         lumine.workspace.getBottomDock().setState({ size: 180 });
         lumine.workspace.getBottomDock().show();
       },
       ready() {
-        return Boolean(document.querySelector(".linter-panel")?.innerText.includes("Roslyn"));
+        return Boolean(document.querySelector(".diagnostics")?.innerText.includes("Roslyn"));
       },
     },
   ],
