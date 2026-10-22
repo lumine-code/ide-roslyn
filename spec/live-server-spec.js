@@ -73,7 +73,7 @@ liveSuite("ide-roslyn real Roslyn protocol", () => {
     const server = require("../lib/server");
     const installed = await server.installServer({
       storagePath,
-      version: process.env.ROSLYN_VERSION || "5.12.0-1.26475.2",
+      version: process.env.ROSLYN_VERSION || "5.13.0-1.26514.10",
       api: managed.apiFor(client.adapter),
     });
     expect(installed.source).toBe("nuget");
