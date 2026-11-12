@@ -68,7 +68,7 @@ jobs:
           cache-dependency-path: lumine/package-lock.json
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.402
+          dotnet-version: 10.0.404
       - name: Install the exact official MIT Roslyn tool
         run: |
           dotnet tool install roslyn-language-server --version "$ROSLYN_VERSION" --tool-path "$GITHUB_WORKSPACE/.test-tools"
